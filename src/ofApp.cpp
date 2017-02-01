@@ -255,7 +255,7 @@ void ofApp::pointLightPass() {
     m_sphereVbo.bind();
 
     for (vector<PointLight>::iterator it = m_lights.begin(); it != m_lights.end(); it++) {
-      ofVec3f lightPos = it->getPosition();
+      auto lightPos = it->getPosition();
       float radius = it->intensity * skMaxPointLightRadius;
 
       // STENCIL
@@ -276,9 +276,9 @@ void ofApp::pointLightPass() {
       // the areas that the spheres affect
       m_gBuffer.bindForLightPass();
       m_pointLightPassShader.begin();
-        ofVec3f lightPosInViewSpace = (glm::vec4(it->getPosition(), 0) * camModelViewMatrix).xyz();
+        auto lightPosInViewSpace = (camModelViewMatrix * glm::vec4(lightPos, 1)).xyz();
 
-        m_pointLightPassShader.setUniform3fv("u_lightPosition", &lightPosInViewSpace.getPtr()[0]);
+        m_pointLightPassShader.setUniform3fv("u_lightPosition", glm::value_ptr(lightPosInViewSpace));
         m_pointLightPassShader.setUniform4fv("u_lightAmbient", it->ambient);
         m_pointLightPassShader.setUniform4fv("u_lightDiffuse", it->diffuse);
         m_pointLightPassShader.setUniform4fv("u_lightSpecular", it->specular);
