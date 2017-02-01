@@ -1,13 +1,13 @@
-//  testApp.cpp
+//  ofApp.cpp
 //
 //  Created by James Acres on 13-01-13
 //  http://www.jamesacres.com
 //  http://github.com/jacres
 //  @jimmyacres
 
-#include "testApp.h"
+#include "ofApp.h"
 
-testApp::testApp() :
+ofApp::ofApp() :
 m_angle(0),
 m_windowWidth(0),
 m_windowHeight(0),
@@ -16,7 +16,7 @@ m_bPulseLights(false)
 {};
 
 //--------------------------------------------------------------
-void testApp::setup() {
+void ofApp::setup() {
   ofSetVerticalSync(false); // can cause problems on some Linux implementations
 
   ofDisableArbTex();
@@ -46,7 +46,7 @@ void testApp::setup() {
   m_sphereVbo.setMesh(sphereMesh, GL_STATIC_DRAW);
 }
 
-void testApp::resizeBuffersAndTextures() {
+void ofApp::resizeBuffersAndTextures() {
 
   if (ofGetWindowMode() == OF_FULLSCREEN) {
     m_windowWidth = ofGetScreenWidth();
@@ -60,12 +60,12 @@ void testApp::resizeBuffersAndTextures() {
   m_ssaoPass.setup(m_windowWidth, m_windowHeight);
 
   // set our camera parameters for ssao pass - inverse proj matrix + far clip are used in shader to recreate position from linear depth
-  m_ssaoPass.setCameraProperties(m_cam.getProjectionMatrix().getInverse(), m_cam.getFarClip());
+  m_ssaoPass.setCameraProperties(glm::inverse(m_cam.getProjectionMatrix()), m_cam.getFarClip());
 
   bindGBufferTextures(); // bind them once to upper texture units - faster than binding/unbinding every frame
 }
 
-void testApp::setupScreenQuad() {
+void ofApp::setupScreenQuad() {
   ofVec2f quadVerts[] = {
     ofVec2f(-1.0f, -1.0f),
     ofVec2f(1.0f, -1.0f),
@@ -85,7 +85,7 @@ void testApp::setupScreenQuad() {
   m_quadVbo.setTexCoordData(&quadTexCoords[0], 4, GL_STATIC_DRAW);
 }
 
-void testApp::createRandomBoxes() {
+void ofApp::createRandomBoxes() {
   // create randomly rotated boxes
   for (unsigned int i=0; i<skNumBoxes; i++) {
     float x = 0;
@@ -100,13 +100,13 @@ void testApp::createRandomBoxes() {
   }
 }
 
-void testApp::setupLights() {
+void ofApp::setupLights() {
   for (unsigned int i=0; i<skNumLights; i++) {
     addRandomLight();
   }
 }
 
-void testApp::addRandomLight() {
+void ofApp::addRandomLight() {
   // create a random light that is positioned on bounding sphere of scene (skRadius)
   PointLight l;
   ofVec3f posOnSphere = ofVec3f(ofRandom(-1.0f, 1.0f), ofRandom(-1.0f, 1.0f), ofRandom(-1.0f, 1.0f));
@@ -131,14 +131,14 @@ void testApp::addRandomLight() {
   m_lights.push_back(l);
 }
 
-void testApp::randomizeLightColors() {
+void ofApp::randomizeLightColors() {
   for (vector<PointLight>::iterator it = m_lights.begin(); it != m_lights.end(); it++) {
     ofVec3f col = ofVec3f(ofRandom(0.4f, 1.0f), ofRandom(0.1f, 1.0f), ofRandom(0.3f, 1.0f));
     it->setDiffuse(col.x, col.y, col.z);
   }
 }
 
-void testApp::bindGBufferTextures() {
+void ofApp::bindGBufferTextures() {
   // set up the texture units we want to use - we're using them every frame, so we'll leave them bound to these units to save speed vs. binding/unbinding
   m_textureUnits[TEX_UNIT_ALBEDO] = 15;
   m_textureUnits[TEX_UNIT_NORMALS_DEPTH] = 14;
@@ -176,7 +176,7 @@ void testApp::bindGBufferTextures() {
   glActiveTexture(GL_TEXTURE0);
 }
 
-void testApp::unbindGBufferTextures() {
+void ofApp::unbindGBufferTextures() {
   // unbind textures and reset active texture back to zero (OF expects it at 0 - things like ofDrawBitmapString() will break otherwise)
   glActiveTexture(GL_TEXTURE0 + m_textureUnits[TEX_UNIT_ALBEDO]); glBindTexture(GL_TEXTURE_2D, 0);
   glActiveTexture(GL_TEXTURE0 + m_textureUnits[TEX_UNIT_NORMALS_DEPTH]); glBindTexture(GL_TEXTURE_2D, 0);
@@ -185,7 +185,7 @@ void testApp::unbindGBufferTextures() {
   glActiveTexture(GL_TEXTURE0);
 }
 
-void testApp::geometryPass() {
+void ofApp::geometryPass() {
 
   glDisable(GL_STENCIL_TEST);
   glEnable(GL_CULL_FACE);
@@ -234,10 +234,10 @@ void testApp::geometryPass() {
   m_gBuffer.unbindForGeomPass(); // done rendering out to our GBuffer
 }
 
-void testApp::pointLightStencilPass() {
+void ofApp::pointLightStencilPass() {
 }
 
-void testApp::pointLightPass() {
+void ofApp::pointLightPass() {
 
   m_gBuffer.resetLightPass();
 
@@ -250,7 +250,7 @@ void testApp::pointLightPass() {
 
   m_cam.begin();
 
-    ofMatrix4x4 camModelViewMatrix = m_cam.getModelViewMatrix(); // need to multiply light positions by camera's modelview matrix to transform them from world space to view space (reason for this is our normals and positions in the GBuffer are in view space so we must do our lighting calculations in the same space). It's faster to do it here on CPU vs. in shader
+    auto camModelViewMatrix = m_cam.getModelViewMatrix(); // need to multiply light positions by camera's modelview matrix to transform them from world space to view space (reason for this is our normals and positions in the GBuffer are in view space so we must do our lighting calculations in the same space). It's faster to do it here on CPU vs. in shader
 
     m_sphereVbo.bind();
 
@@ -276,7 +276,7 @@ void testApp::pointLightPass() {
       // the areas that the spheres affect
       m_gBuffer.bindForLightPass();
       m_pointLightPassShader.begin();
-        ofVec3f lightPosInViewSpace = it->getPosition() * camModelViewMatrix;
+        ofVec3f lightPosInViewSpace = (glm::vec4(it->getPosition(), 0) * camModelViewMatrix).xyz();
 
         m_pointLightPassShader.setUniform3fv("u_lightPosition", &lightPosInViewSpace.getPtr()[0]);
         m_pointLightPassShader.setUniform4fv("u_lightAmbient", it->ambient);
@@ -305,7 +305,7 @@ void testApp::pointLightPass() {
   m_cam.end();
 }
 
-void testApp::deferredRender() {
+void ofApp::deferredRender() {
 
   // final deferred shading pass
   glDisable(GL_DEPTH_TEST);
@@ -319,7 +319,7 @@ void testApp::deferredRender() {
 }
 
 //--------------------------------------------------------------
-void testApp::update() {
+void ofApp::update() {
   m_angle += 1.0f;
 
   int count = 0;
@@ -340,7 +340,7 @@ void testApp::update() {
 }
 
 //--------------------------------------------------------------
-void testApp::draw() {
+void ofApp::draw() {
   geometryPass();
   pointLightPass();
 
@@ -363,10 +363,10 @@ void testApp::draw() {
     char debug_str[255];
     sprintf(debug_str, "Framerate: %f\nNumber of lights: %li\nPress SPACE to toggle drawing of debug buffers\nPress +/- to add and remove lights\n'p' to toggle pulsing of light intensity\n'r' to randomize light colours", ofGetFrameRate(), m_lights.size());
     ofDrawBitmapString(debug_str, ofPoint(15, 20));
-  }  
+  }
 }
 
-void testApp::drawScreenQuad() {
+void ofApp::drawScreenQuad() {
   // set identity matrices and save current matrix state
   glMatrixMode(GL_PROJECTION);
   glPushMatrix();
@@ -385,7 +385,7 @@ void testApp::drawScreenQuad() {
 }
 
 //--------------------------------------------------------------
-void testApp::keyPressed(int key){
+void ofApp::keyPressed(int key){
   if (key == ' ') {
     m_bDrawDebug = !m_bDrawDebug;
   } else if (key == '+' || key == '=') {
@@ -404,39 +404,39 @@ void testApp::keyPressed(int key){
 }
 
 //--------------------------------------------------------------
-void testApp::keyReleased(int key){
+void ofApp::keyReleased(int key){
 }
 
 //--------------------------------------------------------------
-void testApp::mouseMoved(int x, int y){
+void ofApp::mouseMoved(int x, int y){
 }
 
 //--------------------------------------------------------------
-void testApp::mouseDragged(int x, int y, int button){
-
-}
-
-//--------------------------------------------------------------
-void testApp::mousePressed(int x, int y, int button){
+void ofApp::mouseDragged(int x, int y, int button){
 
 }
 
 //--------------------------------------------------------------
-void testApp::mouseReleased(int x, int y, int button){
+void ofApp::mousePressed(int x, int y, int button){
 
 }
 
 //--------------------------------------------------------------
-void testApp::windowResized(int w, int h){
+void ofApp::mouseReleased(int x, int y, int button){
+
+}
+
+//--------------------------------------------------------------
+void ofApp::windowResized(int w, int h){
   resizeBuffersAndTextures();
 }
 
 //--------------------------------------------------------------
-void testApp::gotMessage(ofMessage msg){
+void ofApp::gotMessage(ofMessage msg){
 
 }
 
 //--------------------------------------------------------------
-void testApp::dragEvent(ofDragInfo dragInfo){
+void ofApp::dragEvent(ofDragInfo dragInfo){
 
 }

@@ -13,7 +13,7 @@ public:
   bool setup(int w, int h, int numSamples=12);
   bool setupFbo(int w, int h);
   void setParameters(float occluderBias, float samplingRadius, float constantAttenuation, float linearAttenuation);
-  void setCameraProperties(const ofMatrix4x4& invProjMatrix, float farDistance);
+  void setCameraProperties(const glm::mat4& invProjMatrix, float farDistance);
   void applySSAO(GLuint normalsAndDepthTexUnit);
   void drawDebug(int x, int y);
   

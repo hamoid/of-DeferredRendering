@@ -124,9 +124,9 @@ void SSAOPass::setParameters(float occluderBias, float samplingRadius, float con
   m_ssaoShader.end();
 }
 
-void SSAOPass::setCameraProperties(const ofMatrix4x4& invProjMatrix, float farDistance) {
+void SSAOPass::setCameraProperties(const glm::mat4& invProjMatrix, float farDistance) {
   m_ssaoShader.begin();
-  m_ssaoShader.setUniformMatrix4f("u_inverseProjMatrix", invProjMatrix.getPtr());
+  m_ssaoShader.setUniformMatrix4f("u_inverseProjMatrix", invProjMatrix);
   m_ssaoShader.setUniform1f("u_farDistance", farDistance);
   m_ssaoShader.end();
 }

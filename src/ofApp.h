@@ -1,4 +1,4 @@
-//  testApp.h
+//  ofApp.h
 //
 //  Created by James Acres on 12-08-15
 //  http://www.jamesacres.com
@@ -13,7 +13,7 @@
 #include "pointLight.h"
 #include "primitives.h"
 
-class testApp : public ofBaseApp {
+class ofApp : public ofBaseApp {
 
   struct Box {
     ofVec3f pos;
@@ -47,7 +47,7 @@ class testApp : public ofBaseApp {
   };
 
 public:
-  testApp();
+  ofApp();
 
   void setup();
   void update();
